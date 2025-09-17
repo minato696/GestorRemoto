@@ -1,4 +1,4 @@
-﻿/* styles/globals.css */
+﻿/* src/styles/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,9 +22,17 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     color: #111827;
     line-height: 1.6;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
     min-height: 100vh;
+  }
+
+  /* Dark mode support */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark body {
+    color: #f3f4f6;
+    background-color: #111827;
   }
 
   /* Custom Scrollbar */
@@ -38,10 +46,18 @@
     border-radius: 10px;
   }
 
+  .dark ::-webkit-scrollbar-track {
+    background: #374151;
+  }
+
   ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #60a5fa, #3b82f6);
     border-radius: 10px;
     border: 2px solid #f1f5f9;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    border-color: #374151;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -87,6 +103,30 @@
     }
   }
 
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   @keyframes pulse {
 
     0%,
@@ -96,6 +136,16 @@
 
     50% {
       opacity: 0.5;
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
     }
   }
 
@@ -109,6 +159,21 @@
     }
   }
 
+  @keyframes bounce {
+
+    0%,
+    100% {
+      transform: translateY(-25%);
+      animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+
+    50% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
+
+  /* Animation Classes */
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out;
   }
@@ -117,8 +182,24 @@
     animation: slideUp 0.6s ease-out;
   }
 
+  .animate-slide-in-left {
+    animation: slideInLeft 0.5s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out;
+  }
+
   .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  .animate-bounce {
+    animation: bounce 1s infinite;
   }
 
   /* Gradient Text */
@@ -135,6 +216,11 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   /* Card Hover Effects */
@@ -164,12 +250,22 @@
     @apply shadow-sm hover:shadow-md;
   }
 
+  .dark .btn-secondary {
+    @apply bg-gray-800 text-gray-200 border-gray-700;
+    @apply hover:bg-gray-700 hover:border-gray-600;
+  }
+
   /* Input Styles */
   .input-primary {
     @apply px-4 py-3 border-2 border-gray-200 rounded-xl;
     @apply focus:ring-4 focus:ring-blue-100 focus:border-blue-500;
     @apply transition-all duration-200;
     @apply placeholder-gray-400;
+  }
+
+  .dark .input-primary {
+    @apply bg-gray-800 border-gray-700 text-gray-200;
+    @apply focus:ring-blue-900 focus:border-blue-600;
   }
 
   /* Loading Skeleton */
@@ -179,11 +275,19 @@
     animation: shimmer 1.5s infinite;
   }
 
+  .dark .skeleton {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  }
+
   /* Status Badges */
   .badge-success {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
     @apply bg-gradient-to-r from-green-100 to-emerald-100 text-green-700;
     @apply border border-green-200;
+  }
+
+  .dark .badge-success {
+    @apply from-green-900 to-emerald-900 text-green-300 border-green-800;
   }
 
   .badge-warning {
@@ -192,10 +296,23 @@
     @apply border border-yellow-200;
   }
 
+  .dark .badge-warning {
+    @apply from-yellow-900 to-amber-900 text-yellow-300 border-yellow-800;
+  }
+
   .badge-error {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
     @apply bg-gradient-to-r from-red-100 to-pink-100 text-red-700;
     @apply border border-red-200;
+  }
+
+  .dark .badge-error {
+    @apply from-red-900 to-pink-900 text-red-300 border-red-800;
+  }
+
+  /* Sidebar Transition */
+  .sidebar-transition {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Tooltip */
@@ -218,12 +335,14 @@
   }
 
   /* Smooth Transitions */
-  * {
-    transition-property: none;
-  }
-
   .transition-smooth {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Modal Backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40;
+    animation: fadeIn 0.2s ease-out;
   }
 
   /* Focus Visible */
@@ -233,6 +352,10 @@
     border-radius: 0.25rem;
   }
 
+  .dark *:focus-visible {
+    outline-color: #60a5fa;
+  }
+
   /* Print Styles */
   @media print {
     body {
@@ -240,6 +363,10 @@
     }
 
     .no-print {
+      display: none !important;
+    }
+
+    .sidebar {
       display: none !important;
     }
   }
@@ -252,6 +379,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Line Clamp */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   /* Aspect Ratios */
@@ -289,6 +424,14 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   }
 
+  .dark .shadow-soft {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .shadow-hard {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
   /* Backdrop Filters */
   .backdrop-blur-soft {
     backdrop-filter: blur(8px);
@@ -298,5 +441,34 @@
   .backdrop-blur-hard {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Z-Index Scale */
+  .z-dropdown {
+    z-index: 1000;
+  }
+
+  .z-sticky {
+    z-index: 1020;
+  }
+
+  .z-fixed {
+    z-index: 1030;
+  }
+
+  .z-modal-backdrop {
+    z-index: 1040;
+  }
+
+  .z-modal {
+    z-index: 1050;
+  }
+
+  .z-popover {
+    z-index: 1060;
+  }
+
+  .z-tooltip {
+    z-index: 1070;
   }
 }
