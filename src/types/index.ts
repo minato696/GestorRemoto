@@ -1,5 +1,6 @@
 // src/types/index.ts
 
+// Tipos existentes
 export interface Station {
     id: string;
     departamento: string;
@@ -46,3 +47,24 @@ export type FilterOptions = {
     busqueda: string;
     soloActivas: boolean;
 };
+
+// NUEVOS TIPOS PARA AUTENTICACIÓN Y PERMISOS
+export type UserRole = 'admin' | 'operator' | 'viewer';
+
+export interface UserPermissions {
+    canAdd: boolean;      // Puede agregar estaciones
+    canEdit: boolean;     // Puede editar estaciones
+    canDelete: boolean;   // Puede eliminar estaciones
+    canReview: boolean;   // Puede hacer revisiones
+    canExport: boolean;   // Puede exportar datos
+    canImport: boolean;   // Puede importar datos
+}
+
+export interface User {
+    id: string;
+    username: string;
+    email: string;
+    role: UserRole;
+    permissions: UserPermissions;
+    lastLogin?: string;
+}

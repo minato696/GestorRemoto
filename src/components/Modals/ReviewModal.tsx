@@ -183,10 +183,10 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                                             className="sr-only"
                                         />
                                         <Icon className={`h-8 w-8 ${isSelected
-                                                ? option.color === 'green' ? 'text-green-600'
-                                                    : option.color === 'yellow' ? 'text-yellow-600'
-                                                        : 'text-red-600'
-                                                : 'text-gray-400'
+                                            ? option.color === 'green' ? 'text-green-600'
+                                                : option.color === 'yellow' ? 'text-yellow-600'
+                                                    : 'text-red-600'
+                                            : 'text-gray-400'
                                             }`} />
                                         <span className={`text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-600'
                                             }`}>
@@ -195,8 +195,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                                         {isSelected && (
                                             <div className="absolute top-2 right-2">
                                                 <div className={`w-2 h-2 rounded-full ${option.color === 'green' ? 'bg-green-600'
-                                                        : option.color === 'yellow' ? 'bg-yellow-600'
-                                                            : 'bg-red-600'
+                                                    : option.color === 'yellow' ? 'bg-yellow-600'
+                                                        : 'bg-red-600'
                                                     }`} />
                                             </div>
                                         )}

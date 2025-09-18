@@ -15,11 +15,14 @@ import {
     Signal,
     MoreVertical,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Lock,
+    AlertCircle
 } from 'lucide-react';
 import { Station, Review, FilterOptions } from '../../types';
 import { StationModal } from '../Modals/StationModal';
 import { ReviewModal } from '../Modals/ReviewModal';
+import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 
 interface StationsManagerProps {
@@ -41,6 +44,7 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
     onDeleteStation,
     onSaveReview
 }) => {
+    const { user, canAdd, canEdit, canDelete, canReview } = usePermissions();
     const [filters, setFilters] = useState<FilterOptions>({
         departamento: '',
         busqueda: '',
@@ -82,24 +86,44 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
     };
 
     const handleEdit = (station: Station) => {
+        if (!canEdit) {
+            toast.error('No tienes permisos para editar estaciones');
+            return;
+        }
         setSelectedStation(station);
         setShowEditModal(true);
     };
 
     const handleReview = (station: Station) => {
+        if (!canReview) {
+            toast.error('No tienes permisos para hacer revisiones');
+            return;
+        }
         setSelectedStation(station);
         setShowReviewModal(true);
     };
 
     const handleDelete = async (id: string) => {
+        if (!canDelete) {
+            toast.error('No tienes permisos para eliminar estaciones');
+            return;
+        }
         if (!confirm('¿Estás seguro de eliminar esta estación y todas sus revisiones?')) return;
         await onDeleteStation(id);
         toast.success('Estación eliminada correctamente');
     };
 
+    const handleAddClick = () => {
+        if (!canAdd) {
+            toast.error('No tienes permisos para agregar estaciones');
+            return;
+        }
+        setShowAddModal(true);
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Header */}
+            {/* Header con información de usuario */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
@@ -113,14 +137,44 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
                             Administra las estaciones de radio y sus frecuencias
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Nueva Estación
-                    </button>
+                    <div className="flex items-center gap-3">
+                        {/* Indicador de permisos del usuario */}
+                        {user && (
+                            <div className="px-3 py-2 bg-gray-100 rounded-lg">
+                                <p className="text-xs text-gray-500">Usuario:</p>
+                                <p className="text-sm font-medium text-gray-700">{user.username}</p>
+                                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleAddClick}
+                            disabled={!canAdd}
+                            className={`
+                                px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-md
+                                ${canAdd
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-lg transform hover:-translate-y-0.5'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }
+                            `}
+                        >
+                            {canAdd ? <Plus className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+                            Nueva Estación
+                        </button>
+                    </div>
                 </div>
+
+                {/* Mostrar mensaje de permisos limitados para usuario cusac */}
+                {user?.username === 'cusac' && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                            <p className="text-sm text-blue-700">
+                                <span className="font-medium">Permisos limitados:</span> Puedes agregar nuevas estaciones y hacer revisiones, pero no puedes editar o eliminar estaciones existentes.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Barra de filtros */}
@@ -324,24 +378,45 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
                                                     <div className="flex items-center justify-center gap-1">
                                                         <button
                                                             onClick={() => handleReview(station)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                            title="Revisar"
+                                                            disabled={!canReview}
+                                                            className={`
+                                                                p-2 rounded-lg transition-colors
+                                                                ${canReview
+                                                                    ? 'text-blue-600 hover:bg-blue-50'
+                                                                    : 'text-gray-400 cursor-not-allowed'
+                                                                }
+                                                            `}
+                                                            title={canReview ? "Revisar" : "Sin permisos para revisar"}
                                                         >
                                                             <CheckCircle className="h-4 w-4" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleEdit(station)}
-                                                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            title="Editar"
+                                                            disabled={!canEdit}
+                                                            className={`
+                                                                p-2 rounded-lg transition-colors
+                                                                ${canEdit
+                                                                    ? 'text-gray-600 hover:bg-gray-100'
+                                                                    : 'text-gray-300 cursor-not-allowed'
+                                                                }
+                                                            `}
+                                                            title={canEdit ? "Editar" : "Sin permisos para editar"}
                                                         >
-                                                            <Edit2 className="h-4 w-4" />
+                                                            {canEdit ? <Edit2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(station.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Eliminar"
+                                                            disabled={!canDelete}
+                                                            className={`
+                                                                p-2 rounded-lg transition-colors
+                                                                ${canDelete
+                                                                    ? 'text-red-600 hover:bg-red-50'
+                                                                    : 'text-gray-300 cursor-not-allowed'
+                                                                }
+                                                            `}
+                                                            title={canDelete ? "Eliminar" : "Sin permisos para eliminar"}
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
+                                                            {canDelete ? <Trash2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                                         </button>
                                                         <button
                                                             onClick={() => setExpandedRow(isExpanded ? null : station.id)}
@@ -493,21 +568,42 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
                                 <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
                                     <button
                                         onClick={() => handleReview(station)}
-                                        className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                                        disabled={!canReview}
+                                        className={`
+                                            flex-1 px-3 py-2 rounded-lg transition-colors text-sm font-medium
+                                            ${canReview
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            }
+                                        `}
                                     >
-                                        Revisar
+                                        {canReview ? 'Revisar' : 'Sin permisos'}
                                     </button>
                                     <button
                                         onClick={() => handleEdit(station)}
-                                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                        disabled={!canEdit}
+                                        className={`
+                                            p-2 rounded-lg transition-colors
+                                            ${canEdit
+                                                ? 'text-gray-600 hover:bg-gray-100'
+                                                : 'text-gray-300 cursor-not-allowed'
+                                            }
+                                        `}
                                     >
-                                        <Edit2 className="h-4 w-4" />
+                                        {canEdit ? <Edit2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                     </button>
                                     <button
                                         onClick={() => handleDelete(station.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        disabled={!canDelete}
+                                        className={`
+                                            p-2 rounded-lg transition-colors
+                                            ${canDelete
+                                                ? 'text-red-600 hover:bg-red-50'
+                                                : 'text-gray-300 cursor-not-allowed'
+                                            }
+                                        `}
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        {canDelete ? <Trash2 className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                                     </button>
                                 </div>
                             </div>
@@ -533,7 +629,13 @@ export const StationsManager: React.FC<StationsManagerProps> = ({
                         setShowEditModal(false);
                         setSelectedStation(null);
                     }}
-                    onSave={onUpdateStation}
+                    onSave={(station) => {
+                        // Asegurar que sea un Station completo
+                        if ('id' in station && station.id) {
+                            return onUpdateStation(station as Station);
+                        }
+                        return Promise.reject('Station ID is required');
+                    }}
                     station={selectedStation}
                     title="Editar Estación"
                 />

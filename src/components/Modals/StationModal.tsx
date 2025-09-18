@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 interface StationModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (station: Partial<Station> | Station) => Promise<void>;
+    onSave: (station: Station | Partial<Station>) => Promise<void>;  // <-- Tipo actualizado
     station?: Station | null;
     title?: string;
 }
@@ -55,6 +55,27 @@ export const StationModal: React.FC<StationModalProps> = ({
     useEffect(() => {
         if (station) {
             setFormData(station);
+        } else {
+            // Reset form when adding new station
+            setFormData({
+                departamento: '',
+                localidad: '',
+                frecuencias: {
+                    karibena: '',
+                    exitosa: '',
+                    laKalle: '',
+                    saborMix: '',
+                },
+                accesoRemoto: {
+                    disponible: false,
+                    tipoSoftware: '',
+                    idRemoto: '',
+                    password: '',
+                },
+                contactoAdministrador: '',
+                activo: true,
+                observaciones: '',
+            });
         }
     }, [station]);
 
@@ -68,33 +89,39 @@ export const StationModal: React.FC<StationModalProps> = ({
 
         setLoading(true);
         try {
-            const stationData: Station = {
-                id: station?.id || `station-${Date.now()}`,
-                departamento: formData.departamento!,
-                localidad: formData.localidad!,
-                frecuencias: formData.frecuencias || {
-                    karibena: '',
-                    exitosa: '',
-                    laKalle: '',
-                    saborMix: '',
-                },
-                accesoRemoto: formData.accesoRemoto || {
-                    disponible: false,
-                    tipoSoftware: '',
-                    idRemoto: '',
-                    password: '',
-                },
-                contactoAdministrador: formData.contactoAdministrador || '',
-                activo: formData.activo ?? true,
-                observaciones: formData.observaciones || '',
-                ultimaActualizacion: new Date().toISOString(),
-            };
-
-            await onSave(stationData);
-            toast.success(station ? 'Estación actualizada' : 'Estación agregada');
+            if (station) {
+                // Editando estación existente - enviar Station completo
+                const updatedStation: Station = {
+                    ...station,
+                    departamento: formData.departamento!,
+                    localidad: formData.localidad!,
+                    frecuencias: formData.frecuencias || station.frecuencias,
+                    accesoRemoto: formData.accesoRemoto || station.accesoRemoto,
+                    contactoAdministrador: formData.contactoAdministrador || '',
+                    activo: formData.activo ?? true,
+                    observaciones: formData.observaciones || '',
+                    ultimaActualizacion: new Date().toISOString(),
+                };
+                await onSave(updatedStation);
+                toast.success('Estación actualizada');
+            } else {
+                // Creando nueva estación - enviar Partial<Station>
+                const newStationData: Partial<Station> = {
+                    departamento: formData.departamento!,
+                    localidad: formData.localidad!,
+                    frecuencias: formData.frecuencias,
+                    accesoRemoto: formData.accesoRemoto,
+                    contactoAdministrador: formData.contactoAdministrador || '',
+                    activo: formData.activo ?? true,
+                    observaciones: formData.observaciones || '',
+                };
+                await onSave(newStationData);
+                toast.success('Estación agregada');
+            }
             onClose();
         } catch (error) {
             toast.error('Error al guardar la estación');
+            console.error(error);
         } finally {
             setLoading(false);
         }
