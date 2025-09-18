@@ -7,32 +7,29 @@ import {
     Radio,
     BarChart2,
     CheckSquare,
-    Settings,
     Download,
     Upload,
     Menu,
     X,
-    Home,
-    Database,
-    Activity,
-    HelpCircle,
     LogOut,
     User,
     Sun,
     Moon,
     Bell,
     Shield,
-    Lock
+    Lock,
+    History
 } from 'lucide-react';
 import { db } from '../../lib/db';
 import { Station, Review } from '../../types';
 import { Dashboard } from '../Dashboard/Dashboard';
 import { StationsManager } from '../Stations/StationsManager';
 import { ReviewsManager } from '../Reviews/ReviewsManager';
-import { useAuth } from '../../contexts/AuthContext';
+import { ChangeHistory, addToHistory } from '../History/ChangeHistory';
+import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 
-type TabType = 'dashboard' | 'stations' | 'reviews' | 'settings';
+type TabType = 'dashboard' | 'stations' | 'reviews' | 'history';
 
 interface MainLayoutProps {
     onLogout?: () => void;
@@ -47,6 +44,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [notifications, setNotifications] = useState(0);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
 
     // Hooks de autenticación y permisos
     const { user, logout } = useAuth();
@@ -123,7 +121,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         };
 
         await db.addStation(station);
+
+        // Agregar al historial
+        addToHistory(
+            'create',
+            'station',
+            `Nueva estación agregada: ${station.localidad}, ${station.departamento}`,
+            { stationId: station.id, localidad: station.localidad, departamento: station.departamento }
+        );
+
         await loadData();
+        toast.success('Estación agregada correctamente');
     };
 
     const handleUpdateStation = async (station: Station) => {
@@ -134,7 +142,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
 
         station.ultimaActualizacion = new Date().toISOString();
         await db.updateStation(station);
+
+        // Agregar al historial
+        addToHistory(
+            'update',
+            'station',
+            `Estación actualizada: ${station.localidad}, ${station.departamento}`,
+            { stationId: station.id, localidad: station.localidad, departamento: station.departamento }
+        );
+
         await loadData();
+        toast.success('Estación actualizada correctamente');
     };
 
     const handleDeleteStation = async (id: string) => {
@@ -142,8 +160,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             toast.error('No tienes permisos para eliminar estaciones');
             return;
         }
+
+        const station = stations.find(s => s.id === id);
         await db.deleteStation(id);
+
+        // Agregar al historial
+        if (station) {
+            addToHistory(
+                'delete',
+                'station',
+                `Estación eliminada: ${station.localidad}, ${station.departamento}`,
+                { stationId: id, localidad: station.localidad, departamento: station.departamento }
+            );
+        }
+
         await loadData();
+        toast.success('Estación eliminada correctamente');
     };
 
     // Manejadores para revisiones
@@ -154,6 +186,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         }
 
         const existingReview = await db.getReviewByStationAndDate(stationId, selectedDate);
+        const station = stations.find(s => s.id === stationId);
 
         const review: Review = {
             id: existingReview?.id || `review-${Date.now()}`,
@@ -171,7 +204,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
             await db.addReview(review);
         }
 
+        // Agregar al historial
+        addToHistory(
+            'review',
+            'review',
+            `Revisión realizada en ${station?.localidad}, ${station?.departamento} - Estado: ${reviewData.estado}`,
+            {
+                stationId,
+                estado: reviewData.estado,
+                notas: reviewData.notas,
+                localidad: station?.localidad,
+                departamento: station?.departamento
+            }
+        );
+
         await loadReviewsForDate(selectedDate);
+        toast.success('Revisión guardada correctamente');
     };
 
     // Exportar/Importar datos
@@ -228,7 +276,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         { id: 'dashboard' as TabType, label: 'Dashboard', icon: BarChart2, badge: null },
         { id: 'stations' as TabType, label: 'Estaciones', icon: Radio, badge: stations.length },
         { id: 'reviews' as TabType, label: 'Revisiones', icon: CheckSquare, badge: notifications },
-        { id: 'settings' as TabType, label: 'Configuración', icon: Settings, badge: null },
+        { id: 'history' as TabType, label: 'Historial', icon: History, badge: null, adminOnly: true },
     ];
 
     // Función para obtener el color del rol
@@ -248,6 +296,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
     return (
         <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
             <Toaster position="top-right" />
+
+            {/* Modal de Historial */}
+            {showHistoryModal && (
+                <ChangeHistory
+                    isOpen={showHistoryModal}
+                    onClose={() => setShowHistoryModal(false)}
+                />
+            )}
 
             {/* Sidebar */}
             <aside className={`
@@ -280,13 +336,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                 {/* Menu Items */}
                 <nav className="p-4 space-y-2">
                     {menuItems.map((item) => {
+                        // Solo mostrar historial si es admin
+                        if (item.adminOnly && user?.role !== 'admin') return null;
+
                         const Icon = item.icon;
                         const isActive = activeTab === item.id;
 
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => {
+                                    if (item.id === 'history') {
+                                        setShowHistoryModal(true);
+                                    } else {
+                                        setActiveTab(item.id);
+                                    }
+                                }}
                                 className={`
                                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                                     ${isActive
@@ -417,7 +482,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                                         {activeTab === 'dashboard' && 'Panel de Control'}
                                         {activeTab === 'stations' && 'Gestión de Estaciones'}
                                         {activeTab === 'reviews' && 'Revisiones Diarias'}
-                                        {activeTab === 'settings' && 'Configuración'}
+                                        {activeTab === 'history' && 'Historial de Cambios'}
                                     </h2>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
                                         {format(new Date(), 'EEEE, d \'de\' MMMM \'de\' yyyy', { locale: es })}
@@ -457,11 +522,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                                         <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                                     )}
                                 </button>
-
-                                {/* Help */}
-                                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                                    <HelpCircle className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -497,76 +557,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
                             onDateChange={setSelectedDate}
                             onSaveReview={handleSaveReview}
                         />
-                    )}
-
-                    {activeTab === 'settings' && (
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-                            <div className="max-w-2xl mx-auto">
-                                <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                                    <Shield className="h-6 w-6 text-indigo-600" />
-                                    Información del Usuario
-                                </h3>
-
-                                {user && (
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-sm text-gray-500">Usuario</p>
-                                                <p className="font-medium text-gray-900 dark:text-white capitalize">{user.username}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-500">Correo</p>
-                                                <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-500">Rol</p>
-                                                <p className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
-                                                    {user.role === 'admin' && 'Administrador'}
-                                                    {user.role === 'operator' && 'Operador'}
-                                                    {user.role === 'viewer' && 'Visualizador'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-500">Último acceso</p>
-                                                <p className="font-medium text-gray-900 dark:text-white">
-                                                    {user.lastLogin && format(new Date(user.lastLogin), 'dd/MM/yyyy HH:mm')}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t pt-6">
-                                            <h4 className="font-medium mb-4">Permisos del Usuario</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canAdd ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canAdd ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Agregar estaciones</span>
-                                                </div>
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canEdit ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canEdit ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Editar estaciones</span>
-                                                </div>
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canDelete ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canDelete ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Eliminar estaciones</span>
-                                                </div>
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canReview ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canReview ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Hacer revisiones</span>
-                                                </div>
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canExport ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canExport ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Exportar datos</span>
-                                                </div>
-                                                <div className={`flex items-center gap-2 p-3 rounded-lg ${canImport ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400'}`}>
-                                                    {canImport ? <CheckSquare className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                    <span className="text-sm">Importar datos</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     )}
                 </div>
             </main>

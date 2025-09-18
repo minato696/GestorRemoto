@@ -1,5 +1,5 @@
 // src/hooks/usePermissions.ts
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';  // CAMBIAR: contexts → context
 import { UserPermissions } from '../types';
 
 export const usePermissions = () => {

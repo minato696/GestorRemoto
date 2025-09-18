@@ -100,16 +100,6 @@ export const Login: React.FC<LoginProps> = ({ onSuccess }) => {
                             </>
                         )}
                     </button>
-
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-600 text-center">
-                            <strong>Usuarios de prueba:</strong>
-                        </p>
-                        <div className="mt-2 space-y-1 text-xs text-gray-500">
-                            <p>• <strong>administrador</strong> / 147ABC55 (Acceso completo)</p>
-                            <p>• <strong>cusac</strong> / 147ABC55 (Solo revisiones)</p>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>

@@ -2,8 +2,8 @@
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
-import { AuthProvider } from '../contexts/AuthContext';
-import { LoginPage } from '../components/Auth/LoginPage';
+import { AuthProvider } from '../context/AuthContext';
+import { Login } from '../components/Auth/Login';
 
 // Importamos el componente principal con carga dinámica para evitar problemas con SSR e IndexedDB
 const MainLayout = dynamic(
@@ -85,7 +85,7 @@ export default function Home() {
 
             <AuthProvider>
                 {!isAuthenticated ? (
-                    <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    <Login onSuccess={handleLoginSuccess} />
                 ) : (
                     <MainLayout onLogout={handleLogout} />
                 )}

@@ -1,6 +1,7 @@
-// src/contexts/AuthContext.tsx
+// src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole, UserPermissions } from '../types';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
     user: User | null;
@@ -8,14 +9,15 @@ interface AuthContextType {
     logout: () => void;
     hasPermission: (permission: keyof UserPermissions) => boolean;
     isAuthenticated: boolean;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Configuración de usuarios (en producción, esto vendría de una API)
+// Configuración de usuarios
 const USERS_CONFIG = {
-    admin: {
-        password: 'admin123', // En producción usar hash
+    administrador: {
+        password: '147ABC55',
         role: 'admin' as UserRole,
         permissions: {
             canAdd: true,
@@ -27,7 +29,7 @@ const USERS_CONFIG = {
         }
     },
     cusac: {
-        password: 'cusac123', // En producción usar hash
+        password: '147ABC55',
         role: 'operator' as UserRole,
         permissions: {
             canAdd: true,
@@ -38,8 +40,8 @@ const USERS_CONFIG = {
             canImport: false,
         }
     },
-    viewer: {
-        password: 'viewer123', // En producción usar hash
+    ver: {
+        password: '147ABC55',
         role: 'viewer' as UserRole,
         permissions: {
             canAdd: false,
@@ -52,21 +54,35 @@ const USERS_CONFIG = {
     }
 };
 
+// Importamos addToHistory de forma condicional para evitar errores de dependencia circular
+let addToHistory: any = null;
+if (typeof window !== 'undefined') {
+    import('../components/History/ChangeHistory').then(module => {
+        addToHistory = module.addToHistory;
+    });
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Verificar si hay una sesión guardada
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-            try {
-                const parsedUser = JSON.parse(savedUser);
-                setUser(parsedUser);
-            } catch (error) {
-                console.error('Error parsing saved user:', error);
-                localStorage.removeItem('currentUser');
+        const checkAuth = () => {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                try {
+                    const parsedUser = JSON.parse(savedUser);
+                    setUser(parsedUser);
+                } catch (error) {
+                    console.error('Error parsing saved user:', error);
+                    localStorage.removeItem('currentUser');
+                }
             }
-        }
+            setIsLoading(false);
+        };
+
+        checkAuth();
     }, []);
 
     const login = async (username: string, password: string): Promise<boolean> => {
@@ -76,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const newUser: User = {
                 id: `user-${username}`,
                 username,
-                email: `${username}@radiocontrol.com`,
+                email: `${username}`,
                 role: userConfig.role,
                 permissions: userConfig.permissions,
                 lastLogin: new Date().toISOString(),
@@ -84,15 +100,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             setUser(newUser);
             localStorage.setItem('currentUser', JSON.stringify(newUser));
+
+            // Agregar al historial si está disponible
+            if (addToHistory) {
+                addToHistory(
+                    'login',
+                    'system',
+                    `Inicio de sesión: ${username}`,
+                    { role: userConfig.role, timestamp: new Date().toISOString() }
+                );
+            }
+
+            const roleNames = {
+                admin: 'Administrador',
+                operator: 'Operador',
+                viewer: 'Visualizador'
+            };
+            toast.success(`Bienvenido ${username} (${roleNames[userConfig.role]})`);
+
             return true;
         }
 
+        toast.error('Usuario o contraseña incorrectos');
         return false;
     };
 
     const logout = () => {
+        const currentUser = user;
+
+        if (currentUser && addToHistory) {
+            addToHistory(
+                'logout',
+                'system',
+                `Cierre de sesión: ${currentUser.username}`,
+                { timestamp: new Date().toISOString() }
+            );
+        }
+
         setUser(null);
         localStorage.removeItem('currentUser');
+        toast.success('Sesión cerrada correctamente');
     };
 
     const hasPermission = (permission: keyof UserPermissions): boolean => {
@@ -106,6 +153,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         hasPermission,
         isAuthenticated: !!user,
+        isLoading,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
